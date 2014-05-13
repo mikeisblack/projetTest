@@ -1,3 +1,4 @@
+C EST QUOI CETTE MERDE ?????????????????????????????????????????????
 - hi dude how are you doing ?
 i am adding new blabla
 will i have a conflict 
@@ -18,3 +19,303 @@ While some may see them as the 'crazy ones,' we see genius.
 Because the people who think they are crazy enough to change the world, are the ones who do.
 
 on est sur mike
+
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ include file="/templates/common/include/include.jsp"%>
+<%@page import="fr.elsevier.econtenu.payperview.panier.PanierRenderer"%>
+<%@page import="fr.elsevier.econtenu.moduleEM.commun.ModuleEMPaiement"%>
+<%@page import="java.math.BigDecimal"%>
+<%
+	ModuleEMPaiement modulePaiement = (ModuleEMPaiement) poolModules.getModuleMetier(Module.ModuleEMPaiement);
+	if (modulePaiement.isJspDisplayed()) {
+		String action = modulePaiement.getAction();
+		String etape = modulePaiement.getEtapePaiement();
+		String sBaseUrl = etatSession.getBaseUrl();
+		//PanierRenderer panier = modulePaiement.getPanier();
+		etape = "Recapitulatif";
+		PanierRenderer panier = null;
+		if (ModuleEMPaiement.ACTION_RECUPERATION_FORMULAIRE.equals(action)) {%>
+			<%=modulePaiement.getCreerFormulaire()%>
+	<%} else if (ModuleEMPaiement.ACTION_COMMANDE.equals(action)) { %>	
+	
+<%@page import="fr.elsevier.portail.business.ppv.tarification.PPVItemBean"%>
+<%@page import="fr.elsevier.econtenu.payperview.panier.PPVItemPanierRenderer"%>
+<%@page import="fr.elsevier.econtenu.payperview.panier.RendererContext"%><div id="paiement">
+		<%
+		 ////////////////////////////////////////////////////////////
+		 // ETAPE 1 : Ecran de récapitulation de la commande       //
+		 ////////////////////////////////////////////////////////////
+		 if (ModuleEMPaiement.ETAPE_RECAPITULATIF.equals(etape)) {
+			if (panier != null) {
+		%>
+			<div id="global_paiement">
+				<div id="block_global_etape1_suivi">
+					<div id="image-etape1"></div>
+					<div id="block_txt_etape1_suivi">
+						<strong>Confirmation de commande</strong>
+						<p>Inscription / Identification</p>
+						<p>Paiement</p>
+					</div>
+				</div>
+				<div class="paiement_top2"></div>
+				<div class="paiement_content2">
+					<div id="tab-recap">
+						<table id="table-recap-commande" class="centered">
+						<%	
+							PPVItemPanierRenderer lastRenderer = null;
+							int index = 0;
+							for (PPVItemBean item : panier.getItems()) {
+								PPVItemPanierRenderer renderer = PPVItemPanierRenderer.factory(item, panier.getRendererContext(), index);
+								if (lastRenderer == null || !lastRenderer.getClass().equals(renderer.getClass())) {
+							%>
+									<thead>
+										<%=renderer.renderHeaderLine(true)%>
+									</thead>
+								<%}%>
+								<%=renderer.renderDataLine(false, true)%>
+								<%lastRenderer = renderer;
+								index++;
+							}
+							%>
+						</table>
+					</div>
+					<div class="montant-total-panier">
+						<p>@@116191@@ : <%=panier.renderMontantTotal() %> &euro;</p>
+					</div>
+			
+					<div id="c_lien_commande">
+						<form action="" method="post">
+							<input type="hidden" name="<%=ModuleEMPaiement.PARAMETRE_ETAPE%>" value="<%=ModuleEMPaiement.ETAPE_COMMANDE%>" />
+							<input type="submit" value="Commander"/>
+						</form>
+					</div>
+				</div>
+				<div class="paiement_bottom"></div>
+			</div>
+		<% } else { etatSession.setRedirectToBaseUrl(); %>
+			<div>
+				Aucun article n'est dans votre panier.
+			</div>
+		<% }
+			 ////////////////////////////////////////////////////////////
+			 // ETAPE 2 ou 3 : Ecran de commande ou d'identification   //
+			 ////////////////////////////////////////////////////////////
+		} else if (ModuleEMPaiement.ETAPE_COMMANDE.equals(etape)) {
+			 //On vérifie si l'utilisateur est identifié pour continuer la commande
+			 if (!modulePaiement.isUserConnected()) {
+				 ////////////////////////////////////////////////////////////////
+				 // ETAPE 2 : Ecran d'identification ou de création de compte  //
+				 ////////////////////////////////////////////////////////////////
+			 %>
+				<div id="global_paiement">
+					<div id="block_global_etape2_suivi">
+						<div id="image-etape2"></div>
+						<div id="block_txt_etape2_suivi">
+							<del>Confirmation de commande</del>
+							<strong>Inscription / Identification</strong>
+							<p>Paiement</p>
+						</div>
+					</div>
+					<div class="paiement_top2"></div>
+						<div class="paiement_content">
+					 		<jsp:include page="<%=modulePaiement.getConfig().getPathJspLoginOuCreationCompte()%>" />
+						 </div>
+					 <div class="paiement_bottom"></div>
+				</div>
+			 <%} else {
+				 ////////////////////////////////////////////////////////////
+				 // ETAPE 3 : Ecran de commande							   //
+				 ////////////////////////////////////////////////////////////
+				 if (panier != null) {
+					 %>
+					<div id="global_paiement">
+					 <div id="block_global_etape3_suivi">
+					 	<div id="image-etape3"></div>
+						<div id="block_txt_etape3_suivi">
+							<del>Confirmation de commande</del>
+							<p>
+								<del>Inscription / Identification</del>
+							</p>
+							<strong>Paiement</strong>
+						</div>
+					</div>
+					<div class="paiement_top2"></div>
+						<div class="paiement_content2">
+					 <%
+				 	UserBean userBean = proxySession.getUserBeanIndividuel();
+					boolean showPaypal = modulePaiement.getConfig().isPaiementPaypalActif();
+				 	String erreur = modulePaiement.getErreurEtapeCommande();
+				 	if (!StringUtilities.isNullOrEmpty(erreur)) {
+				 %>
+				 		<div class="erreur">
+				 			<%=erreur%>
+				 		</div>
+				 	<%} %>
+					 <div id="tab-recap">
+						<table id="table-recap-commande" class="centered">
+						<%	
+							PPVItemPanierRenderer lastRenderer = null;
+							int index = 0;
+							for (PPVItemBean item : panier.getItems()) {
+								PPVItemPanierRenderer renderer = PPVItemPanierRenderer.factory(item, panier.getRendererContext(), index);
+								if (lastRenderer == null || !lastRenderer.getClass().equals(renderer.getClass())) {
+							%>
+									<thead>
+										<%=renderer.renderHeaderLine(false)%>
+									</thead>
+								<%}%>
+								<%=renderer.renderDataLine(false, false)%>
+								<%lastRenderer = renderer;
+								index++;
+							}
+						%>
+						</table>
+					</div>
+					<div class="montant-total-panier">
+						<p>@@116191@@ : <%=panier.renderMontantTotal() %> &euro;</p>
+					</div>
+					<div class="b_etape3_adresse">
+					<h3>Votre adresse :</h3>
+					<div id="errors_adresses">
+						<div>Veuillez corriger les erreurs suivantes :</div>
+					</div>
+					<table>
+						<tr>
+							<td class="table_adresse_c1">Adresse* :</td>
+							<td class="table_adresse_c2"><input id="adresse1" name="adresse1" type="text" value="<%=StringUtilities.nullToEmpty(userBean.getAd1())%>" required="required" data-message="L'adresse est obligatoire"/></td>
+						</tr>
+						<tr>
+							<td class="table_adresse_c1"></td>
+							<td class="table_adresse_c2"><input id="adresse2" name="adresse2" type="text" value="<%=StringUtilities.nullToEmpty(userBean.getAd2())%>"/></td>
+						</tr>
+						<tr>
+							<td class="table_adresse_c1">Code postal* :</td>
+							<td class="table_adresse_c2"><input id="code_postal" name="code_postal" type="text" value="<%=StringUtilities.nullToEmpty(userBean.getCp())%>" required="required" data-message="Le code postal est obligatoire"/></td>
+						</tr>
+						<tr>
+							<td class="table_adresse_c1">Ville* :</td>
+							<td class="table_adresse_c2"><input id="ville" name="ville" type="text" value="<%=StringUtilities.nullToEmpty(userBean.getVille())%>" required="required" data-message="La ville est obligatoire"/></td>
+						</tr>
+						<tr>
+							<td class="table_adresse_c1">Pays* :</td>
+							<td class="table_adresse_c2">
+								<select id="code_pays" name="code_pays" style="width: 180px;" required="required" data-message="Le pays est obligatoire">
+									<% String sCodePaysUtilisateur = "";
+									   if(sCodePaysUtilisateur != null) {
+										   sCodePaysUtilisateur = String.valueOf(userBean.getCodePays());
+									}%>
+									<%=ListePays.getListePays(Language.francais, sCodePaysUtilisateur)%>
+								</select>
+							</td>
+						</tr>
+					</table>
+					<input id="email-user" type="hidden" name="<%=ModuleEMPaiement.PARAMETRE_EMAIL%>" value="<%=userBean.getEmail()%>"/>
+				</div>
+				
+				<div class="b_etape3_promo">
+					<h3>Paiement sécuris&eacute; :</h3>
+					<div id="errors_typepaie">S&eacute;lectionnez un type de paiement.</div>
+					<p>La transaction s'effectue sur le site de <strong>paiement s&eacute;curis&eacute; standard SSL</strong> de notre partenaire CIC<% if(showPaypal){ %> ou Pay Pal<% } %>.<br/>
+						Suite &agrave; votre achat, une demande de d&eacute;bit sera envoy&eacute;e dans un d&eacute;lai de 3 jours &agrave; votre banque.<br/>
+						La date de débit de votre compte d&eacute;pendra de vos accords bancaires.<br/>
+						Vous pouvez donc effectuer votre paiement en toute confiance.</p>
+				</div>
+					<div class="recap_paiement_secure">
+				<div id="form_paie">
+					<% if (showPaypal) {//Afficher si le paiement paypal est possible%>
+						<p>@@116830@@ <%=panier.renderMontantTotal()%> &euro;, @@116831@@ :</p>
+					<%} %>
+				<div id="block_paiement">	
+					<div class="paiment">
+						<% if (showPaypal) { %>
+							<input id="checkboxCIC" type="radio" name="typepaie" value="paiecarte" />
+						<%} else { %>
+							<input id="checkboxCIC" style="display:none" type="radio" name="typepaie" checked="checked" value="paiecarte" /> 
+						<%} %>
+							<label for="checkboxCIC">
+								<img src="/templates/e-ecn/images/logo_cic_paie2.jpg" />
+							</label>
+					</div>
+					<% if (showPaypal) { %>
+						<div class="paiment" >
+							<input id="checkboxPaypal" type="radio" name="typepaie" value="paiepaypal" />
+							<label for="checkboxPaypal"> 
+								<img src="/templates/e-ecn/images/paypal.jpg" />
+							</label>
+						</div>
+					 <% } %>
+					 
+					<%-- <div id="offres_facture">
+						<input type="checkbox" id="facture" name="facture"><label for="facture">@@116678@@</label>
+					</div>--%>
+				</div>	
+				
+				<h3>@@110146@@ :</h3>
+				<div id="errors_cgv_cga">@@110146@@</div>
+				<div id="paiement_CGV_VGA">
+					<input id="checkboxCGV" type="checkbox" name="cgv" required="required"/>
+					<span>
+						<label for="checkboxCGV">@@116253@@ : 
+							<a href="<%= sBaseUrl +"module/"+ Module.DisplayStaticPage.getName() +"/"+ Node.cgv.getPathTokenName()%>" target="_blank" class="thickbox" title="@@110146@@" onclick="changeThisModuleLinkToAjaxLinkForThickBox(this);" >@@110146@@</a>
+						</label>
+					</span>
+				<div id="errors_message_information">@@116835@@</div>
+				<form id="formulaire_commande" action="<%=modulePaiement.getServletCommande().getURLRedirectToServlet()%>"></form>
+				<div id="erreurs-js" style="display : none;"></div>
+				<div class="ecn_btn_gris_gen" id="validPaie_moduleEM">
+					<div class="ecn_btn_gen_left"></div>
+					<div class="ecn_btn_gen_content">@@116856@@</div>
+					<div class="ecn_btn_gen_right"></div>
+				</div>
+				<img id="valid-paie-loader-ajax" src="/templates/common/images/ajax-loader-small.gif" style="display : none;" />
+	
+				<div id="formPaiementPartenaire" style="display:none;"></div>
+				<div id="validation-commande-en-cours" style="display : none;">La validation de la commande est en cours. Veuillez patientez.</div>
+				</div>
+				<div class="clear"></div>
+			</div>
+		</div>	
+					</div>
+					 <div class="paiement_bottom"></div>
+					 </div>
+				 <%} else {
+			%>
+			 Panier vide. Une erreur s'est produite. Veuillez remplir de nouveau votre panier.
+			 
+		 <% }
+			}
+		} else if (ModuleEMPaiement.ETAPE_RETOUR_PAIEMENT.equals(etape)) {
+			boolean retourOk = modulePaiement.traiterRetourPaiement();
+			
+			String nomSite = new String();
+			if (etatSession.getWebSiteBehaviors()!=null){
+				nomSite = etatSession.getWebSiteBehaviors().getNomWebSite();
+			}
+			else{
+				nomSite = etatSession.getWebSiteBean().getName();
+			}
+		%>
+			<div id="retour_paiement">
+				<% if (retourOk){ %>
+					<h4>@@116249@@</h4>
+					<div id="confirmPaiement">
+						<p>Vous venez d'effectuer un réglement sur le site <%= nomSite %>  et nous vous remercions de votre confiance.</p> 
+						<p>@@116863@@</p><br/>
+						<p>@@116861@@ : <a href=\"infos\"></a></p>
+					</div>
+				<%}else{ %>
+					<h4>@@116864@@</h4>
+					<div id="erreurPaiement">
+						<p>@@116865@@</p> 
+						<p>@@116866@@ <a href=\"infos\"></a></p>
+					</div>
+					<a href="<%=sBaseUrl + Node.monPanier.getPathTokenName()%>">Retour au panier</a>
+					
+				<%}%>
+			</div>
+		<%
+		
+		}%>
+	</div>
+<%	}
+} %>
