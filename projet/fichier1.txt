@@ -1,3 +1,2 @@
 - hi dude how are you doing ?
-- I'm fine and you ?
-- conflict merge warning
+i am adding new blabla
